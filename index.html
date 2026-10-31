@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Namaz & Tasks Dashboard</title>
+<script src="firebase-config.js"></script><script src="extras.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root{--bg:#f4f7f5;--card:#fff;--tx:#14231c;--mu:#5d7168;--pr:#0f7a55;--pl:#dcf3e8;--bd:#dbe5df;--wa:#c2410c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0d1612;--card:#16231d;--tx:#e6f1eb;--mu:#8fa69b;--pr:#34c08a;--pl:#1a3a2d;--bd:#26382f;--wa:#fb923c;color-scheme:dark}}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--card);border-bottom:1px solid var(--bd);padding:10px 14px;display:flex;align-items:center;gap:10px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--card);z-index:10}
+.dp{width:42px;height:42px;border-radius:50%;background:var(--pl);color:var(--pr);display:flex;align-items:center;justify-content:center;font-weight:700;object-fit:cover;flex:none}
+.hd{flex:1;min-width:0}.hd b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hd small{color:var(--mu)}
+.clock{font-weight:700;font-size:18px;color:var(--pr);text-align:right}.clock small{display:block;font-size:11px;color:var(--mu);font-weight:400}
+nav{display:flex;gap:4px;padding:8px 10px;overflow-x:auto;background:var(--bg)}
+nav button{flex:1;white-space:nowrap}
+button,select,input{font:inherit;color:inherit}
+button{border:1px solid var(--bd);background:var(--card);padding:8px 12px;border-radius:10px;cursor:pointer}
+button.on,button.pri{background:var(--pr);color:#fff;border-color:var(--pr)}
+main{max-width:860px;margin:0 auto;padding:6px 12px 40px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin:10px 0}
+h2{margin:4px 0 8px;font-size:17px}
+.row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)}.row:last-child{border:0}
+.row .n{flex:1}.row .t{font-weight:700}.row.next{background:var(--pl);margin:0 -8px;padding:10px 8px;border-radius:10px}
+input[type=checkbox]{width:24px;height:24px;accent-color:var(--pr);flex:none}
+input[type=text],input:not([type]),select{width:100%;padding:9px 11px;border:1px solid var(--bd);border-radius:10px;background:var(--bg)}
+.big{font-size:26px;font-weight:800;color:var(--pr)}.mu{color:var(--mu)}
+.bar{height:10px;border-radius:6px;background:var(--pl);overflow:hidden}.bar i{display:block;height:100%;background:var(--pr)}
+.sc{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:560px;font-size:13px}
+th,td{padding:6px 4px;text-align:center;border-bottom:1px solid var(--bd)}th{position:sticky;top:0;background:var(--card)}
+td:first-child,th:first-child{text-align:left;padding-left:6px}tr.today{background:var(--pl)}tr.fut{opacity:.5}
+td small{display:block;color:var(--mu);font-size:11px}td input{width:20px;height:20px}
+.flex{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.flex>*{flex:1}
+#toast{position:fixed;left:10px;right:10px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:20;display:none;background:var(--pr);color:#fff;padding:14px;border-radius:14px;box-shadow:0 6px 24px #0005}
+#modal{position:fixed;inset:0;background:#0008;z-index:30;display:none;align-items:center;justify-content:center;padding:16px}#modal>div{background:var(--card);border-radius:16px;padding:18px;max-width:440px;width:100%;max-height:86vh;overflow:auto}
+.ai{white-space:pre-wrap;margin-top:8px}.del{color:var(--wa);border:0;background:none;font-size:18px}.done{text-decoration:line-through;color:var(--mu)}
+
+.brand{font-size:24px;font-weight:800;color:#6366f1;padding:14px 10px 18px}.so{color:#ef4444;margin-top:auto}
+.ins{background:linear-gradient(135deg,#1e1b4b22,#6366f122);border-color:#6366f155}
+.grad{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:0}.grad .big,.grad .mu{color:#fff}
+.g2{display:grid;gap:12px;grid-template-columns:1fr}.tag{font-size:11px;padding:2px 9px;border-radius:9px;background:#8b5cf633;color:#a78bfa;margin-left:6px}
+#ib{background:none;border:0;color:var(--tx);white-space:nowrap}
+@media(min-width:900px){body{display:grid;grid-template-columns:230px 1fr;grid-template-rows:auto 1fr;min-height:100vh}
+nav{grid-column:1;grid-row:1/3;flex-direction:column;position:sticky;top:0;height:100vh;background:var(--card);border-right:1px solid var(--bd);padding:10px;overflow:auto}
+nav button{flex:none;text-align:left;border:0;background:none;padding:12px}nav button.on{background:var(--pl);color:var(--pr)}
+header{grid-column:2;grid-row:1}main{grid-column:2;width:100%}.g2{grid-template-columns:2fr 1fr}}
+</style><link rel="manifest" href="manifest.json"><link rel="icon" href="icon.svg"><meta name="theme-color" content="#0f7a55"></head>
+<body>
+<header><div id="dp" class="dp">?</div><div class="hd"><b id="nm">Loading…</b><small id="ct">Pakistan · Karachi</small></div><button id="ib" data-a="inst">⬇ Install App</button><div class="clock" id="clk">--<small>Karachi time</small></div></header>
+<nav id="nav"></nav>
+<main id="main"><div class="card">Loading your account…</div></main>
+<div id="toast"></div><div id="modal"><div id="mb"></div></div>
+<script>
+window.claude=window.claude||{use:async()=>null};
+const $=s=>document.querySelector(s),P=['Fajr','Dhuhr','Asr','Maghrib','Isha'];
+const CITY={Karachi:[24.8607,67.0011],Lahore:[31.5204,74.3587],Islamabad:[33.6844,73.0479],Peshawar:[34.0151,71.5249],Quetta:[30.1798,66.975]};
+const TABS=[['today','🏠 Dashboard'],['tasks','✅ Tasks'],['month','🕌 Prayer Times'],['hisab','💰 Hisab'],['stats','📊 Stats'],['chat','💬 Family'],['contacts','📇 Contacts'],['vault','🗄 Storage'],['ai','✨ AI'],['hist','🕘 History'],['set','⚙️ Settings']];
+var S=null,ref=null,tab='today',timer=null,dirty=false,seen={};
+const dflt=()=>({name:'',dp:'',fmt12:true,city:'Karachi',tasks:[],pr:{},month:'',day:'',hist:{},exp:[],budget:0,contacts:[],notes:[],fam:''});
+const pad=n=>String(n).padStart(2,'0'),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function K(){const o={};new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Karachi',hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}).formatToParts(new Date()).forEach(p=>o[p.type]=+p.value);o.key=o.year+'-'+pad(o.month)+'-'+pad(o.day);o.ym=o.year+'-'+pad(o.month);o.min=o.hour*60+o.minute+o.second/60;return o}
+function times(y,m,d){const[la,ln]=CITY[S.city]||CITY.Karachi,r=Math.PI/180,D=Date.UTC(y,m-1,d,12)/864e5+2440587.5-2451545;
+const g=(357.529+.98560028*D)*r,q=280.459+.98564736*D,L=(q+1.915*Math.sin(g)+.02*Math.sin(2*g))*r,e=(23.439-4e-7*D)*r;
+let RA=(Math.atan2(Math.cos(e)*Math.sin(L),Math.cos(L))/r/15+24)%24,eq=((q/15)%24+24)%24-RA;if(eq>12)eq-=24;if(eq<-12)eq+=24;
+const dec=Math.asin(Math.sin(e)*Math.sin(L)),noon=12+5-ln/15-eq;
+const ang=a=>Math.acos(Math.max(-1,Math.min(1,(-Math.sin(a*r)-Math.sin(dec)*Math.sin(la*r))/(Math.cos(dec)*Math.cos(la*r)))))/r/15;
+const asr=-Math.atan(1/(2+Math.tan(Math.abs(la*r-dec))))/r;
+return[noon-ang(18),noon+.02,noon+ang(asr),noon+ang(.833)+.02,noon+ang(18)].map(h=>Math.round(h*60))}
+function f(min){let H=Math.floor(min/60)%24,M=min%60;if(!S.fmt12)return pad(H)+':'+pad(M);return(H%12||12)+':'+pad(M)+' '+(H>=12?'PM':'AM')}
+function f12(n){const H=n.hour;return(S.fmt12?(H%12||12):pad(H))+':'+pad(n.minute)+':'+pad(n.second)+(S.fmt12?(H>=12?' PM':' AM'):'')}
+function save(){dirty=true;clearTimeout(save.t);save.t=setTimeout(async()=>{try{await ref.set(S)}catch(e){toast('Save failed: '+(e.message||e.code))}dirty=false},500)}
+function stats(ym){const[y,m]=ym.split('-').map(Number),dim=new Date(y,m,0).getDate();let done=0;for(const k in S.pr)if(k.startsWith(ym))done+=S.pr[k].filter(Boolean).length;return{done,total:dim*5,pct:Math.round(done/(dim*5)*100),dim}}
+function roll(){const n=K();let ch=false;if(S.day!==n.key){S.tasks=S.tasks.filter(t=>t.r||!t.done||S.day==='');S.tasks.forEach(t=>t.done=false);S.day=n.key;ch=true}
+if(S.month&&S.month!==n.ym){const old=S.month,st=stats(old);S.hist[old]=st;S.month=n.ym;ch=true;monthEnd(old,st)}else if(!S.month){S.month=n.ym;ch=true}
+if(ch)save()}
+function monthEnd(ym,st){const tk=S.tasks.length;$('#mb').innerHTML=`<h2>🎉 Month ${ym} finished</h2><div class="big">${st.pct}%</div><p>You prayed ${st.done} of ${st.total} prayers. New month started automatically.</p><button class="pri" id="mai">✨ Get AI result</button><div class="ai" id="mao"></div><div class="flex" style="margin-top:12px"><button id="mcl">Close</button></div>`;$('#modal').style.display='flex';
+$('#mcl').onclick=()=>$('#modal').style.display='none';$('#mai').onclick=()=>ai(`Month ${ym} namaz result for ${S.name||'a user'} in Karachi: ${st.done} of ${st.total} prayers (${st.pct}%). Give a short kind result: grade, 2 strengths, 2 tips for next month, and a dua. Max 120 words.`,$('#mao'))}
+async function ai(p,el){const s=await claude.use('sample');if(!s){el.textContent='AI is not available on this page.';return}el.textContent='Thinking…';try{const r=await s(p,{onText:x=>el.textContent=x.text,cache:false});el.textContent=r.text}catch(e){el.textContent='AI error: '+(e.code||e.message)}}
+function toast(h,ms=7000){const t=$('#toast');t.innerHTML=h;t.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>t.style.display='none',ms)}
+function beep(){try{const a=new AudioContext(),o=a.createOscillator();o.connect(a.destination);o.frequency.value=660;o.start();o.stop(a.currentTime+.6)}catch(e){}}
+function check(){const n=K(),tm=times(n.year,n.month,n.day);tm.forEach((t,i)=>{const id=n.key+i;if(n.min>=t&&n.min<t+3&&!seen[id]){seen[id]=1;const done=(S.pr[n.key]||[])[i];if(!done){beep();toast(`🕌 <b>${P[i]}</b> time is now (${f(t)}). <button data-a="tk" data-d="${n.key}" data-i="${i}">I prayed ✓</button>`,60000);try{new Notification('🕌 '+P[i]+' time',{body:'It is '+f(t)+' in Karachi. Tick after you pray.'})}catch(e){}}}})}
+var tick=function(){if(!S)return;const n=K();$('#clk').innerHTML=f12(n)+'<small>Karachi · Pakistan</small>';if(n.second<2||tick.l!==n.key){tick.l=n.key;roll();check();if(tab==='today')render()}}
+var h0;function render(){if(!S)return;$('#nm').textContent=S.name||'Set your name';$('#ct').textContent='Pakistan · '+S.city+' • '+new Intl.DateTimeFormat('en-u-ca-islamic-umalqura',{timeZone:'Asia/Karachi',day:'numeric',month:'long',year:'numeric'}).format(new Date());
+$('#dp').outerHTML=S.dp?`<img id="dp" class="dp" src="${S.dp}" alt="">`:`<div id="dp" class="dp">${esc((S.name||'?')[0].toUpperCase())}</div>`;
+$('#nav').innerHTML='<div class="brand">MyLife</div>'+TABS.map(([k,l])=>`<button data-a="tab" data-k="${k}" class="${k===tab?'on':''}">${l}</button>`).join('')+'<button data-a="so" class="so">⎋ Sign Out</button>';
+const n=K(),tm=times(n.year,n.month,n.day),pr=S.pr[n.key]||[0,0,0,0,0],st=stats(S.month||n.ym);let h='';
+if(tab==='today'){let nx=tm.findIndex(t=>t>n.min);const left=nx<0?null:Math.round(tm[nx]-n.min);
+h=`<div class="card"><h2>Today · ${n.key}</h2><div class="mu">${nx<0?'All prayers time passed for today':`Next: <b>${P[nx]}</b> in ${Math.floor(left/60)}h ${left%60}m`}</div>`+P.map((p,i)=>`<div class="row ${i===nx?'next':''}"><span class="n">${p}</span><span class="t">${f(tm[i])}</span><input type="checkbox" data-a="tk" data-d="${n.key}" data-i="${i}" ${pr[i]?'checked':''} ${n.min<tm[i]?'disabled':''}></div>`).join('')+`</div><div class="card"><h2>This month</h2><div class="big">${st.pct}%</div><div class="bar"><i style="width:${st.pct}%"></i></div><p class="mu">${st.done} / ${st.total} prayers ticked</p><button data-a="notif">🔔 Enable notifications</button></div>`}
+if(tab==='month'){const[y,m]=(S.month||n.ym).split('-').map(Number),dim=new Date(y,m,0).getDate();let rows='';
+for(let d=1;d<=dim;d++){const key=y+'-'+pad(m)+'-'+pad(d),t=times(y,m,d),p=S.pr[key]||[],td=key===n.key,fu=key>n.key;
+rows+=`<tr class="${td?'today':''} ${fu?'fut':''}"><td>${d} ${new Date(y,m-1,d).toLocaleDateString('en',{weekday:'short'})}</td>`+t.map((x,i)=>`<td><small>${f(x)}</small><input type="checkbox" data-a="tk" data-d="${key}" data-i="${i}" ${p[i]?'checked':''} ${fu?'disabled':''}></td>`).join('')+'</tr>'}
+h=`<div class="card" id="shot"><h2>Full month · ${y}-${pad(m)}</h2><div class="flex"><div><div class="big">${st.pct}%</div><span class="mu">${st.done}/${st.total} prayers</span></div></div><div class="bar"><i style="width:${st.pct}%"></i></div><div class="sc"><table><tr><th>Day</th>${P.map(p=>`<th>${p}</th>`).join('')}</tr>${rows}</table></div></div><div class="card"><button class="pri" data-a="shot">📸 Save screenshot for parents</button></div>`}
+if(tab==='tasks_old'){h=`<div class="card"><h2>Tasks</h2><p class="mu">Ticks reset automatically every new day (Karachi time). Tasks stay saved.</p><div class="flex"><input id="nt" placeholder="Add a task…" style="flex:3"><button class="pri" data-a="add">Add</button></div>`+(S.tasks.length?S.tasks.map(t=>`<div class="row"><input type="checkbox" data-a="td" data-id="${t.id}" ${t.done?'checked':''}><span class="n ${t.done?'done':''}">${esc(t.t)}</span><button class="del" data-a="del" data-id="${t.id}">🗑</button></div>`).join(''):'<p class="mu">No tasks yet.</p>')+'</div>'}
+if(tab==='ai'){const hist=Object.entries(S.hist).map(([k,v])=>`<div class="row"><span class="n">${k}</span><b>${v.pct}%</b></div>`).join('')||'<p class="mu">Past month results appear here.</p>';
+h0=`<div class="card"><h2><div class="flex"><button class="pri" data-a="aim">Review my month</button></div><input id="aq" placeholder="Ask about prayer, habits, tasks…" style="margin-top:8px"><button data-a="aiq" style="margin-top:8px;width:100%">Ask AI</button><div class="ai" id="ao"></div></div><div class="card"><h2>Past months</h2>${hist}</div>`}
+if(tab==='set'){h=`<div class="card"><h2>Profile</h2><input id="sn" value="${esc(S.name)}" placeholder="Your name"><div class="flex" style="margin-top:8px"><label class="mu">Change DP <input type="file" id="sd" accept="image/*"></label></div></div>
+<div class="card"><h2>Preferences</h2><label>Country</label><select disabled><option>Pakistan</option></select><label>City</label><select id="sc">${Object.keys(CITY).map(c=>`<option ${c===S.city?'selected':''}>${c}</option>`).join('')}</select><div class="row"><span class="n">12-hour time</span><input type="checkbox" id="sf" ${S.fmt12?'checked':''}></div><p class="mu">Time zone is fixed to Pakistan Standard Time (Karachi) and updates automatically.</p></div>
+`}
+h=(tab==='today'?banner():'')+h+extra();$('#main').innerHTML=h;const m=$('#msgs');if(m)m.scrollTop=1e9}
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-a]');if(!b||!S)return;const a=b.dataset.a;
+if(a==='tab'){tab=b.dataset.k;render()}
+if(a==='tk'){const d=b.dataset.d,i=+b.dataset.i;const p=S.pr[d]||[0,0,0,0,0].map(()=>false);p[i]=!p[i];S.pr[d]=p;save();$('#toast').style.display='none';render()}
+if(a==='add'){const v=$('#nt').value.trim();if(v){S.tasks.push({id:Date.now(),t:v,done:false,r:$('#nr').checked,c:$('#ncat').value});save();render()}}
+if(a==='td'){const t=S.tasks.find(x=>x.id==b.dataset.id);t.done=!t.done;save();render()}
+if(a==='del'){S.tasks=S.tasks.filter(x=>x.id!=b.dataset.id);save();render()}
+if(a==='notif'){try{const r=await Notification.requestPermission();toast(r==='granted'?'Notifications on ✓':'Notifications blocked. Keep this page open for in-app alerts + sound.')}catch(x){toast('Browser notifications unavailable here. In-app alerts and sound still work while the page is open.')}}
+if(a==='aim'){const st=stats(S.month),n=K();ai(`Prayer review for ${S.name||'user'} (Karachi), month ${S.month}: ${st.done}/${st.total} prayers (${st.pct}%), ${n.day} days passed. Daily tasks: ${S.tasks.length}. Give brief encouragement and 3 practical tips. Max 130 words.`,$('#ao'))}
+if(a==='aiq'){const q=$('#aq').value.trim();if(q)ai(`You are a kind helper in a namaz and task tracker app for a user in Karachi. Answer briefly. Question: ${q}`,$('#ao'))}
+if(a==='shot'){try{const c=await html2canvas($('#shot'),{backgroundColor:getComputedStyle(document.body).backgroundColor,scale:2});c.toBlob(async bl=>{const d=await claude.use('downloads');if(d)await d.save({filename:'namaz-month-'+S.month+'.png',data:bl});else toast('Use your device screenshot button.')})}catch(x){toast('Screenshot failed. Use your device screenshot button.')}}
+if(a==='dl'){const d=await claude.use('downloads');if(d){try{await d.save({filename:'namaz-tasks-app.html',data:'<!DOCTYPE html>\n'+document.documentElement.outerHTML})}catch(x){}}else toast('Download unavailable here.')}});
+document.addEventListener('change',async e=>{if(!S)return;const t=e.target;
+if(t.id==='sf'){S.fmt12=t.checked;save();render()}if(t.id==='sc'){S.city=t.value;save();render()}
+if(t.type==='checkbox'&&t.dataset.a)return;
+if(t.id==='sd'&&t.files[0]){const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=c.height=96;const s=Math.min(im.width,im.height);c.getContext('2d').drawImage(im,(im.width-s)/2,(im.height-s)/2,s,s,0,0,96,96);S.dp=c.toDataURL('image/jpeg',.8);save();render()};im.src=URL.createObjectURL(t.files[0])}});
+document.addEventListener('input',e=>{if(e.target.id==='sn'&&S){S.name=e.target.value;save();$('#nm').textContent=S.name||'Set your name'}});
+(async()=>{try{const[d,u]=await Promise.all([claude.use('db'),claude.use('user')]);
+if(d&&u){UID=await u.id();DB=d;ref=d.doc('data/users/'+UID+'/app')}else{ref={set:async x=>localStorage.setItem('nt',JSON.stringify(x)),onSnapshot:fn=>{const r=localStorage.getItem('nt');fn({exists:!!r,data:()=>r?JSON.parse(r):{}})}}}
+ref.onSnapshot(s=>{if(dirty)return;S=Object.assign(dflt(),s.exists?s.data():{});if(!S.pr)S.pr={};roll();render();tick();if(DB)live()},e=>{$('#main').innerHTML='<div class="card">Could not load data: '+esc(e.message||e.code)+'</div>'});
+setInterval(()=>tick(),1000)}catch(e){$('#main').innerHTML='<div class="card">Could not start: '+esc(e.message||String(e))+'</div>'}})();
+</script><script>
+let DB=null,UID=null,chat=[],files=[],hist=[],unC=null,unF=null,IP=null;
+const CATS=['Food','Home','Bills','Travel','Health','School','Shopping','Other'],rs=n=>'Rs '+Math.round(n).toLocaleString('en-PK');
+const mexp=ym=>S.exp.filter(e=>e.d.startsWith(ym)),sum=a=>a.reduce((x,e)=>x+e.a,0);
+const inp=(id,ph,t)=>`<input id="${id}" ${t?'type="'+t+'"':''} placeholder="${ph}">`;
+function note(id,t,b){let k='ns'+id;try{if(localStorage.getItem(k))return;localStorage.setItem(k,1)}catch(e){if(seen[k])return;seen[k]=1}beep();toast('<b>'+t+'</b><br>'+b,15000);try{new Notification(t,{body:b})}catch(e){}}
+function smart(){const n=K(),tm=times(n.year,n.month,n.day),ex=mexp(n.ym),tot=sum(ex);
+tm.forEach((t,i)=>{if(n.min>=t-5&&n.min<t-3)note(n.key+'p'+i,'🕌 '+P[i]+' in 5 minutes','Get ready. Time: '+f(t))});
+if(n.hour===20&&S.tasks.some(t=>!t.done))note(n.key+'t','✅ Tasks pending',S.tasks.filter(t=>!t.done).length+' tasks not done today.');
+if(n.hour===21&&!S.exp.some(e=>e.d===n.key))note(n.key+'e','💰 Hisab reminder','Aaj ka kharcha add karna na bhoolen.');
+if(S.budget){const p=tot/S.budget;if(p>=1)note(n.ym+'b100','🚨 Budget finished','Rs '+Math.round(tot)+' spent of '+rs(S.budget));else if(p>=.8)note(n.ym+'b80','⚠️ 80% budget used','Left: '+rs(S.budget-tot))}
+if(n.day===new Date(n.year,n.month,0).getDate()&&n.hour===22)note(n.ym+'end','📅 Month ends today','Tomorrow the AI month result opens automatically.')}
+const _t=tick;tick=function(){_t();const n=K();if(S&&n.second<2&&smart.l!==n.min){smart.l=n.min;smart()}};
+function mine(m){return m.u===UID}
+function msgs(){return chat.map(m=>`<div style="text-align:${mine(m)?'right':'left'};margin:6px 0"><div style="display:inline-block;max-width:80%;padding:8px 12px;border-radius:14px;background:${mine(m)?'var(--pr)':'var(--pl)'};color:${mine(m)?'#fff':'var(--tx)'};text-align:left"><small style="opacity:.75">${esc(m.n||'?')} · ${new Date(m.ts).toLocaleTimeString('en-PK',{timeZone:'Asia/Karachi',hour:'2-digit',minute:'2-digit',hour12:S.fmt12})}</small><br>${esc(m.t)}</div></div>`).join('')||'<p class="mu">No messages yet. Say salam 👋</p>'}
+function live(){if(!DB)return;unC&&unC();unC=null;if(S.fam){let first=1;unC=DB.collection('chat/'+S.fam+'/msgs').orderBy('ts').limit(100).onSnapshot(s=>{const old=chat.length;chat=s.docs.map(d=>d.data());const m=$('#msgs');if(m){m.innerHTML=msgs();m.scrollTop=1e9}else if(!first&&chat.length>old&&!mine(chat[chat.length-1])){const l=chat[chat.length-1];beep();toast('💬 <b>'+esc(l.n)+'</b>: '+esc(l.t))}first=0})}
+if(!unF){unF=DB.collection('data/users/'+UID+'/files').onSnapshot(s=>{files=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(tab==='vault')render()})}}
+function extra(){const n=K(),ym=n.ym;let h='';
+if(tab==='hisab'){const ex=mexp(ym),tot=sum(ex),by={};ex.forEach(e=>by[e.c]=(by[e.c]||0)+e.a);const bp=S.budget?Math.min(100,Math.round(tot/S.budget*100)):0;
+h=`<div class="card"><h2>💰 Hisab · ${ym}</h2><div class="big">${rs(tot)}</div><div class="mu">${S.budget?'Budget '+rs(S.budget)+' · left '+rs(S.budget-tot):'Set a monthly budget'}</div><div class="bar"><i style="width:${bp}%;${bp>=100?'background:var(--wa)':''}"></i></div><div class="flex" style="margin-top:10px">${inp('eb','Monthly budget','number')}<button data-a="bud">Set budget</button></div></div>
+<div class="card"><h2>Add expense</h2><div class="flex">${inp('ea','Amount','number')}<select id="ec">${CATS.map(c=>'<option>'+c+'</option>').join('')}</select></div><div style="margin-top:8px">${inp('en','Note (sabzi, bijli bill…)')}</div><button class="pri" data-a="eadd" style="margin-top:8px;width:100%">Add expense</button></div>
+<div class="card"><h2>By category</h2>${Object.entries(by).sort((a,b)=>b[1]-a[1]).map(([c,v])=>`<div class="row"><span class="n">${c}</span><b>${rs(v)}</b></div><div class="bar"><i style="width:${v/tot*100}%"></i></div>`).join('')||'<p class="mu">No expenses yet.</p>'}</div>
+<div class="card"><h2>History</h2>${ex.slice().reverse().map(e=>`<div class="row"><span class="n">${e.d.slice(5)} · ${e.c}<br><small class="mu">${esc(e.n||'')}</small></span><b>${rs(e.a)}</b><button class="del" data-a="edel" data-id="${e.id}">🗑</button></div>`).join('')||'<p class="mu">Empty.</p>'}</div>`}
+if(tab==='stats'){const st=stats(ym),ex=mexp(ym),tot=sum(ex),dim=st.dim,days=Array.from({length:dim},(_,i)=>sum(ex.filter(e=>e.d===ym+'-'+pad(i+1)))),mx=Math.max(1,...days),dn=S.tasks.filter(t=>t.done).length,pd=Math.max(1,n.day),mp=Object.entries(S.hist);
+h=`<div class="card" id="shot2"><h2>📊 Statistics · ${ym}</h2><div class="flex"><div><div class="big">${st.pct}%</div><span class="mu">Prayers</span></div><div><div class="big">${dn}/${S.tasks.length}</div><span class="mu">Tasks today</span></div><div><div class="big">${rs(tot)}</div><span class="mu">Spent</span></div></div>
+<p class="mu">Daily average ${rs(tot/pd)} · month forecast ${rs(tot/pd*dim)}</p><h2>Daily spending</h2><div style="display:flex;align-items:flex-end;gap:2px;height:90px">${days.map((v,i)=>`<div title="${i+1}: ${rs(v)}" style="flex:1;height:${Math.max(2,v/mx*100)}%;background:${i+1===n.day?'var(--wa)':'var(--pr)'};border-radius:3px 3px 0 0"></div>`).join('')}</div>
+<h2 style="margin-top:14px">Past months</h2>${mp.map(([k,v])=>`<div class="row"><span class="n">${k}</span><span>🕌 ${v.pct}%</span><b>${rs(sum(mexp(k)))}</b></div>`).join('')||'<p class="mu">Appears after first month ends.</p>'}</div><div class="card"><button class="pri" data-a="aistat" style="width:100%">✨ AI analysis of everything</button><div class="ai" id="ao"></div></div>`}
+if(tab==='chat'){h=!DB?'<div class="card">Family chat needs the online version (claude.ai link). The downloaded app is offline.</div>':!S.fam?`<div class="card"><h2>👨‍👩‍👧 Family chat</h2><p class="mu">Everyone in the family enters the same secret family code. Use a hard-to-guess code. Family members must be invited to this page by the owner.</p><div class="flex">${inp('fc','Family code e.g. khan-home-7391')}<button class="pri" data-a="fam">Join</button></div></div>`:`<div class="card"><h2>👨‍👩‍👧 Family: ${esc(S.fam)}</h2><div id="msgs" style="height:48vh;overflow:auto">${msgs()}</div><div class="flex" style="margin-top:8px"><input id="cm" placeholder="Write a message…" style="flex:4"><button class="pri" data-a="send">Send</button></div><button data-a="leave" style="margin-top:8px">Leave family</button></div>`}
+if(tab==='contacts'){h=`<div class="card"><h2>📇 Contacts</h2><div class="flex">${inp('cn','Name')}${inp('cp','Phone','tel')}</div><div style="margin-top:8px">${inp('cr','Relation (Ammi, Abbu, Bhai…)')}</div><button class="pri" data-a="cadd" style="margin-top:8px;width:100%">Add contact</button></div><div class="card">${S.contacts.map(c=>`<div class="row"><span class="n"><b>${esc(c.n)}</b> <small class="mu">${esc(c.r||'')}</small><br><small>${esc(c.p)}</small></span><a href="tel:${esc(c.p)}">📞</a><a href="https://wa.me/${esc(c.p.replace(/\D/g,''))}" target="_blank" rel="noopener">💬</a><button class="del" data-a="cdel" data-id="${c.id}">🗑</button></div>`).join('')||'<p class="mu">No contacts.</p>'}</div>`}
+if(tab==='vault'){h=`<div class="card"><h2>🗄 Notes</h2>${inp('vt','Title')}<textarea id="vx" rows="3" placeholder="Write note…" style="width:100%;margin-top:8px;padding:9px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx)"></textarea><button class="pri" data-a="nadd" style="margin-top:8px;width:100%">Save note</button>${S.notes.map(x=>`<div class="row"><span class="n"><b>${esc(x.t)}</b><br><small class="mu">${esc(x.x)}</small></span><button class="del" data-a="ndel" data-id="${x.id}">🗑</button></div>`).join('')}</div>
+<div class="card"><h2>📁 Files (cloud, max 150 KB each)</h2>${DB?'<input type="file" id="vf">':'<p class="mu">File storage needs the online version.</p>'}${files.map(x=>`<div class="row"><span class="n">${esc(x.n)}<br><small class="mu">${Math.round(x.sz/1024)} KB</small></span><button data-a="fdl" data-id="${x.id}">⬇️</button><button class="del" data-a="fdel" data-id="${x.id}">🗑</button></div>`).join('')}</div>`}
+if(tab==='ai'){h=`<div class="card"><h2>✨ AI Assistant</h2><p class="mu">Knows your prayers, tasks and hisab. Roman Urdu, Urdu or English. It can also do things: try “kal ke 500 rupay sabzi add karo” or “add task: bijli bill”.</p><div class="flex"><button data-a="aq1">Plan my day</button><button data-a="aq2">Analyze spending</button><button data-a="aq3">Budget plan</button><button data-a="aq4">Prayer coach</button></div><div id="ah" style="margin-top:10px">${hist.map(m=>`<div class="ai" style="margin:6px 0;${m.role==='user'?'text-align:right;color:var(--pr)':''}">${esc(m.content)}</div>`).join('')}</div><div class="flex" style="margin-top:8px"><input id="aq" placeholder="Ask anything…" style="flex:4"><button class="pri" data-a="aiq">Send</button></div></div>`}
+if(tab==='set'){h=`<div class="card"><h2>👤 Account</h2><p class="mu">${DB?'You are signed in with your claude.ai account (sign up, email/password and Google sign-in are handled securely there). Use the same account on every device.':'Offline app mode: data is saved on this device only.'}</p>${DB?inp('sf2','Family code (chat)').replace('placeholder','value="'+esc(S.fam)+'" placeholder'):''}</div>
+<div class="card"><h2>📲 Install / Download</h2><div class="flex"><button class="pri" data-a="inst">Install app</button><button class="pri" data-a="zip">⬇️ Download ZIP</button></div><p class="mu">The ZIP is a full offline app (works on laptop and mobile). Host the folder on any https site or open index.html, then Install / Add to Home Screen.</p></div>`}
+return h}
+const ASSET='<h2';
+async function aiRun(q){const s=await claude.use('sample'),box=$('#ah');if(!s){toast('AI needs the online version.');return}
+hist.push({role:'user',content:q});hist.push({role:'assistant',content:'Thinking…'});render();const n=K(),st=stats(n.ym),ex=mexp(n.ym),by={};ex.forEach(e=>by[e.c]=(by[e.c]||0)+e.a);
+const ctx=`You are a warm assistant inside a namaz, task and home-budget app for ${S.name||'the user'} in Karachi, Pakistan. Reply in the user's language (Roman Urdu/Urdu/English), short and practical. Use tools to add tasks/expenses/prayer ticks/budget when asked. Today ${n.key}. Prayers this month ${st.pct}% (${st.done}/${st.total}). Tasks: ${S.tasks.map(t=>(t.done?'[x]':'[ ]')+t.t).join('; ')||'none'}. Budget ${S.budget||'not set'}, spent ${Math.round(sum(ex))}, by category ${JSON.stringify(by)}, last expenses ${JSON.stringify(ex.slice(-8).map(e=>[e.d,e.c,e.a,e.n]))}. Past months ${JSON.stringify(S.hist)}.\n\nUser: `;
+const m=hist.slice(0,-1).slice(-10).map(x=>({role:x.role,content:x.content}));m[m.length-1].content=ctx+q;
+const o={type:'object',properties:{},};const tl=(name,description,props,fn)=>({name,description,inputSchema:{type:'object',properties:props},execute:async i=>{fn(i);save();return 'done'}});
+const tools=[tl('add_task','Add a daily task',{text:{type:'string'}},i=>S.tasks.push({id:Date.now(),t:i.text,done:false})),tl('add_expense','Add an expense in PKR',{amount:{type:'number'},category:{type:'string',enum:CATS},note:{type:'string'},date:{type:'string',description:'YYYY-MM-DD, default today'}},i=>S.exp.push({id:Date.now()+Math.random(),a:+i.amount,c:i.category||'Other',n:i.note||'',d:i.date||n.key})),tl('set_budget','Set monthly budget',{amount:{type:'number'}},i=>S.budget=+i.amount),tl('mark_prayer','Tick a prayer today',{prayer:{type:'string',enum:P}},i=>{const p=S.pr[n.key]||[0,0,0,0,0].map(()=>false);p[P.indexOf(i.prayer)]=true;S.pr[n.key]=p})];
+try{const r=await s(m,{tools,modelTier:'complex',cache:false,onText:x=>{hist[hist.length-1].content=x.text;const e=$('#ah');if(e&&e.lastChild)e.lastChild.textContent=x.text}});hist[hist.length-1].content=r.text}catch(e){hist[hist.length-1].content='AI error: '+(e.code||e.message)}render()}
+const A={aq1:'Plan my day today using my prayer times and tasks.',aq2:'Analyze my spending this month and tell me where I can save.',aq3:'Make a smart monthly budget plan for my family from my spending.',aq4:'Give me prayer coaching based on my month so far.',aistat:'Give a complete analysis of my prayers, tasks and expenses with 5 actions.'};
+async function dlBlob(url,name){const b=url.split(','),m=/:(.*?);/.exec(b[0])[1],a=atob(b[1]),u=new Uint8Array(a.length);for(let i=0;i<a.length;i++)u[i]=a.charCodeAt(i);const d=await claude.use('downloads');d?d.save({filename:name,data:new Blob([u],{type:m})}):toast('Download unavailable.')}
+const ICON='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="#0f7a55"/><text x="50" y="68" font-size="56" text-anchor="middle">🕌</text></svg>';
+async function zipApp(){if(!window.JSZip)return toast('ZIP library not loaded.');const z=new JSZip();let h='<!DOCTYPE html>\n'+document.documentElement.outerHTML;
+h=h.replace(/<main id="main">[\s\S]*?<\/main>/,'<main id="main"></main>').replace('</head>','<link rel="manifest" href="manifest.json"><link rel="icon" href="icon.svg"><meta name="theme-color" content="#0f7a55"></head>').replace('</body>','<script>if("serviceWorker"in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{})<\/script></body>');
+z.file('index.html',h);z.file('icon.svg',ICON);z.file('manifest.json',JSON.stringify({name:'Namaz & Tasks',short_name:'Namaz',start_url:'./index.html',display:'standalone',background_color:'#0f7a55',theme_color:'#0f7a55',icons:[{src:'icon.svg',sizes:'any',type:'image/svg+xml',purpose:'any'}]}));
+z.file('sw.js',"const C='nt1',F=['./','index.html','manifest.json','icon.svg'];self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(F))));self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));");
+z.file('README.txt','Namaz & Tasks app\n1. Upload this folder to any https hosting (GitHub Pages, Netlify) or run a local server.\n2. Open index.html in Chrome/Edge/Safari.\n3. Menu > Install app / Add to Home Screen.\nOffline mode: data is saved on the device. Cloud sync, chat and AI need the claude.ai online version.\n');
+const b=await z.generateAsync({type:'blob'}),d=await claude.use('downloads');d?d.save({filename:'namaz-tasks-app.zip',data:b}):toast('Download unavailable.')}
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();IP=e});
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-a]');if(!b||!S)return;const a=b.dataset.a,n=K(),v=id=>$('#'+id)&&$('#'+id).value.trim();
+if(a==='bud'){S.budget=+v('eb')||0;save();render()}
+if(a==='eadd'){const x=+v('ea');if(x>0){S.exp.push({id:Date.now(),a:x,c:$('#ec').value,n:v('en'),d:n.key});save();render()}}
+if(a==='edel'){S.exp=S.exp.filter(x=>x.id!=b.dataset.id);save();render()}
+if(a==='fam'){const c=v('fc').toLowerCase().replace(/[^a-z0-9-]/g,'');if(c.length>=4){S.fam=c;save();live();render()}else toast('Code needs 4+ letters/numbers.')}
+if(a==='leave'){S.fam='';chat=[];unC&&unC();unC=null;save();render()}
+if(a==='send'){const t=v('cm');if(t&&S.fam){$('#cm').value='';DB.collection('chat/'+S.fam+'/msgs').add({u:UID,n:S.name||'Me',t:t.slice(0,500),ts:Date.now()}).catch(x=>toast('Cannot send: '+(x.code||x.message)+' (owner must give you Contributor access)'))}}
+if(a==='cadd'){const nm=v('cn'),p=v('cp');if(nm&&p){S.contacts.push({id:Date.now(),n:nm,p,r:v('cr')});save();render()}}
+if(a==='cdel'){S.contacts=S.contacts.filter(x=>x.id!=b.dataset.id);save();render()}
+if(a==='nadd'){const t=v('vt');if(t){S.notes.push({id:Date.now(),t,x:v('vx')});save();render()}}
+if(a==='ndel'){S.notes=S.notes.filter(x=>x.id!=b.dataset.id);save();render()}
+if(a==='fdl'){const f=files.find(x=>x.id==b.dataset.id);f&&dlBlob(f.url,f.n)}
+if(a==='fdel'){DB.doc('data/users/'+UID+'/files/'+b.dataset.id).delete()}
+if(a==='aiq'){const q=v('aq');if(q)aiRun(q)}if(A[a])aiRun(A[a]);
+if(a==='zip')zipApp();
+if(a==='inst'){IP?IP.prompt():toast('Phone: browser menu → Add to Home Screen. Laptop: menu → Install app. Or download the ZIP.')}});
+document.addEventListener('change',e=>{const t=e.target;if(t.id==='sf2'&&S){S.fam=t.value.toLowerCase().replace(/[^a-z0-9-]/g,'');save();live()}
+if(t.id==='vf'&&t.files[0]){const f=t.files[0];if(f.size>150*1024)return toast('File too big (max 150 KB).');const r=new FileReader();r.onload=()=>DB.doc('data/users/'+UID+'/files/'+Date.now()).set({n:f.name,sz:f.size,url:r.result,ts:Date.now()}).catch(x=>toast('Upload failed'));r.readAsDataURL(f)}});
+</script>
+<script>
+let INS='';const TC=['Personal','Work','Study','Home','Health'];
+function trow(t){return `<div class="row"><input type="checkbox" data-a="td" data-id="${t.id}" ${t.done?'checked':''}><span class="n ${t.done?'done':''}">${esc(t.t)}<br>${t.r?'<small style="color:#818cf8">🔁 Daily</small>':''}<span class="tag">${esc(t.c||'Personal')}</span></span><button class="del" data-a="del" data-id="${t.id}">🗑</button></div>`}
+function tform(){return `<div class="flex"><input id="nt" placeholder="Add a new task…" style="flex:3"><button class="pri" data-a="add">＋ Add</button></div><div class="flex" style="margin-top:8px"><label><input type="checkbox" id="nr"> 🔁 Repeat daily</label><select id="ncat">${TC.map(c=>'<option>'+c+'</option>').join('')}</select></div>`}
+function banner(){const p=S.tasks.filter(t=>!t.done).length;return `<div class="card ins"><b>✨ AI Insight</b><br>${esc(INS||(p>3?'You have a busy day ahead with many tasks. Bismillah!':p?'You have '+p+' task(s) today. Bismillah!':'All clear. Alhamdulillah!'))} <button data-a="ins" style="margin-left:8px">Refresh with AI</button></div>`}
+var _x=extra;extra=function(){const n=K();let o=_x();
+if(tab==='today'){const tm=times(n.year,n.month,n.day),nx=tm.findIndex(t=>t>n.min),l=nx<0?0:Math.round(tm[nx]-n.min);
+o=`<div class="g2"><div class="card"><h2>Quick Tasks</h2>${tform()}${S.tasks.map(trow).join('')||'<p class="mu">No tasks.</p>'}</div><div class="card grad"><h2>${nx<0?'All prayers done for today':'Next: '+P[nx]}</h2>${nx<0?'':'<div class="big">'+f(tm[nx])+'</div><div class="mu">in '+Math.floor(l/60)+'h '+l%60+'m</div>'}<p class="mu">Prayed today: ${(S.pr[n.key]||[]).filter(Boolean).length}/5</p></div></div>`+o}
+if(tab==='tasks')o=`<div class="card"><h2>My Tasks</h2>${tform()}${S.tasks.map(trow).join('')||'<p class="mu">No tasks yet.</p>'}</div>`;
+if(tab==='hist'){const days=Object.keys(S.pr).sort().reverse().slice(0,30);o=`<div class="card"><h2>🕘 History</h2><h3>Months</h3>${Object.entries(S.hist).map(([k,v])=>`<div class="row"><span class="n">${k}</span><span>🕌 ${v.pct}%</span><b>${rs(sum(mexp(k)))}</b></div>`).join('')||'<p class="mu">Appears after first month ends.</p>'}<h3>Last days (prayers)</h3>${days.map(d=>`<div class="row"><span class="n">${d}</span><b>${S.pr[d].filter(Boolean).length}/5</b></div>`).join('')||'<p class="mu">Nothing yet.</p>'}</div>`}
+return o};
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-a]');if(!b||!S)return;
+if(b.dataset.a==='so')toast('Sign out is done from your claude.ai profile menu. Your data stays private in your account.');
+if(b.dataset.a==='ins'){const s=await claude.use('sample');if(!s)return toast('AI needs the online version.');INS='Thinking…';render();const p=S.tasks.filter(t=>!t.done).map(t=>t.t).join(', ');try{const r=await s(`One warm short sentence (max 20 words) of insight for a Karachi user's day. Pending tasks: ${p||'none'}. Prayers today ${(S.pr[K().key]||[]).filter(Boolean).length}/5. Reply in the same style as: You have a busy day ahead. Bismillah!`,{cache:false});INS=r.text}catch(x){INS=''}render()}});
+</script><script>if("serviceWorker"in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{})</script></body></html>
